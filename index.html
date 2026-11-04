@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#050a12" />
+  <title>Starfall Command — Real-Time Strategy</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Starfall Command battlefield"></canvas>
+
+    <div id="hud" class="is-hidden" aria-live="off">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"><span></span></div>
+          <div class="brand-text">
+            <strong>STARFALL</strong>
+            <small>AEGIS COMPACT // K-17</small>
+          </div>
+        </div>
+
+        <div class="resource-strip">
+          <div class="resource" title="Ionium crystals">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 20 8v8l-8 6-8-6V8z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m12 6 4 4-4 8-4-8z" fill="currentColor" opacity=".7"/></svg>
+            <span class="resource-value" id="mineral-value">0</span><span class="resource-label">IONIUM</span>
+          </div>
+          <div class="resource" title="Supply used / available">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V7l8-4 8 4v11l-8 3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.4"/></svg>
+            <span class="resource-value" id="supply-value">0/0</span><span class="resource-label">SUPPLY</span>
+          </div>
+          <div class="resource workers-resource" title="Active harvesters">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" stroke="currentColor" stroke-width="1.4"/></svg>
+            <span class="resource-value" id="worker-value">0</span><span class="resource-label">HARVESTERS</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <div class="mission-clock"><span id="clock">00:00</span><small>MISSION TIME</small></div>
+          <button class="icon-button" id="sound-button" title="Toggle sound (M)" aria-label="Toggle sound">
+            <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a5 5 0 0 1 0 6M19 6a9 9 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+            <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 9l4 6M21 9l-4 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </button>
+          <button class="icon-button" id="pause-button" title="Pause (P)" aria-label="Pause game">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="3"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="objective-panel" id="objective-panel">
+        <div class="panel-kicker"><span class="pulse-dot"></span> PRIMARY DIRECTIVE</div>
+        <div class="objective-title" id="objective-title">Destroy the Korvax Nexus</div>
+        <div class="objective-sub" id="objective-sub">Establish a foothold and eliminate the enemy command structure.</div>
+        <div class="objective-progress"><i id="objective-progress"></i></div>
+        <div class="threat-row"><span>THREAT</span><div class="threat-pips" id="threat-pips"></div><span id="threat-label">LOW</span></div>
+      </aside>
+
+      <div class="alert-stack" id="alert-stack"></div>
+
+      <div class="notification-panel" id="notification-panel">
+        <div class="notification-icon" id="notification-icon">!</div>
+        <div>
+          <strong id="notification-title">INCOMING</strong>
+          <span id="notification-body"></span>
+        </div>
+      </div>
+
+      <section class="bottom-panel">
+        <div class="selection-panel">
+          <div class="portrait-frame" id="portrait-frame">
+            <canvas id="portrait" width="160" height="160" aria-hidden="true"></canvas>
+            <span class="portrait-corner tl"></span><span class="portrait-corner br"></span>
+          </div>
+          <div class="selection-details" id="selection-details">
+            <div class="selection-heading">
+              <div>
+                <h2 id="selection-name">NO SELECTION</h2>
+                <p id="selection-role">Select a unit or structure</p>
+              </div>
+              <span class="team-tag" id="selection-team">AEGIS</span>
+            </div>
+            <div class="health-block" id="health-block">
+              <div class="health-label"><span>INTEGRITY</span><b id="selection-hp">—</b></div>
+              <div class="health-track"><i id="selection-health"></i></div>
+              <div class="stat-row" id="selection-stats"></div>
+            </div>
+            <div class="queue-row" id="queue-row"></div>
+          </div>
+        </div>
+
+        <div class="center-panel">
+          <div class="sensor-head"><span>LOCAL SENSOR GRID</span><span id="sensor-coords">X:000 Y:000</span></div>
+          <div class="minimap-shell" id="minimap-shell">
+            <canvas id="minimap" width="256" height="176" aria-label="Minimap"></canvas>
+            <div class="minimap-corners"><i></i><i></i><i></i><i></i></div>
+            <div class="minimap-scan"></div>
+          </div>
+          <div class="center-footer">
+            <span id="selection-count">0 UNITS</span>
+            <span class="key-hint">SPACE // BASE</span>
+          </div>
+        </div>
+
+        <div class="command-panel">
+          <div class="command-head"><span id="command-title">COMMAND</span><span class="key-hint">CTRL + 1–9 // GROUPS</span></div>
+          <div class="command-grid" id="command-grid"></div>
+          <div class="command-footer">
+            <div class="mineral-mini"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 20 8v8l-8 6-8-6V8z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span id="command-minerals">0</span></div>
+            <span class="command-hint" id="command-hint">Awaiting orders</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="mobile-controls" id="mobile-controls">
+        <button data-mobile="army">ARMY</button>
+        <button data-mobile="workers">WORKERS</button>
+        <button data-mobile="base">BASE</button>
+        <button data-mobile="stop">STOP</button>
+      </div>
+      <div class="control-hint-bar" id="control-hint-bar">
+        <span><b>LMB</b> SELECT</span><span><b>RMB</b> COMMAND</span><span><b>A</b> ATTACK-MOVE</span><span><b>WASD</b> PAN</span><span><b>WHEEL</b> ZOOM</span><span><b>F1</b> IDLE WORKER</span>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay menu-overlay">
+      <div class="menu-grid"></div>
+      <div class="menu-frame">
+        <div class="menu-topline"><span>SECTOR K-17 // VESPENE REACH</span><span class="transmission"><i></i> UPLINK STABLE</span></div>
+        <div class="menu-content">
+          <div class="title-block">
+            <div class="eyebrow">REAL-TIME STRATEGY</div>
+            <h1><span>STARFALL</span><b>COMMAND</b></h1>
+            <p class="tagline">Build. Harvest. Outmaneuver. Break the Korvax line before they break you.</p>
+            <div class="title-rule"><i></i><span>K-17</span><i></i></div>
+            <div class="difficulty-label">SELECT THREAT PROFILE</div>
+            <div class="difficulty-picker" id="difficulty-picker">
+              <button data-difficulty="cadet"><small>01</small><strong>CADET</strong><span>Forgiving economy. Slower assaults.</span></button>
+              <button data-difficulty="veteran" class="active"><small>02</small><strong>VETERAN</strong><span>The intended campaign experience.</span></button>
+              <button data-difficulty="overlord"><small>03</small><strong>OVERLORD</strong><span>Ruthless production. Constant pressure.</span></button>
+            </div>
+            <button class="deploy-button" id="deploy-button"><span>DEPLOY STRIKE FORCE</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-5 7 5 7z" fill="currentColor"/></svg></button>
+            <div class="menu-meta"><span id="best-time">BEST: —</span><span>AUTOSAVE OFF // IRON COMMAND</span></div>
+          </div>
+
+          <div class="briefing-card">
+            <div class="briefing-header"><span>MISSION BRIEF</span><b>01</b></div>
+            <div class="holo-map" id="holo-map">
+              <div class="holo-ring r1"></div><div class="holo-ring r2"></div><div class="holo-ring r3"></div>
+              <div class="holo-sweep"></div>
+              <span class="holo-blip b1"></span><span class="holo-blip b2"></span><span class="holo-blip b3"></span>
+              <span class="holo-base player">A</span><span class="holo-base enemy">K</span>
+              <span class="holo-axis x"></span><span class="holo-axis y"></span>
+            </div>
+            <div class="briefing-copy">
+              <div class="brief-row"><span>OBJECTIVE</span><b>DESTROY KORVAX NEXUS</b></div>
+              <p>The Korvax Dominion has anchored a command nexus on the crystal shelf. Harvest ionium, raise a production line, and wipe their foothold from the sector.</p>
+              <ul>
+                <li><i></i>Protect your Command Nexus at all costs.</li>
+                <li><i></i>Grow your harvester crew and expand supply.</li>
+                <li><i></i>Break the defense, then level the enemy core.</li>
+              </ul>
+            </div>
+            <div class="briefing-footer"><span>INTEL: 4 HOSTILE SIGNATURES</span><span class="code">KX-771</span></div>
+          </div>
+        </div>
+        <div class="controls-strip">
+          <div><b>SELECT</b><span>Left click / drag</span></div>
+          <div><b>COMMAND</b><span>Right click</span></div>
+          <div><b>ATTACK-MOVE</b><span>A + click</span></div>
+          <div><b>CAMERA</b><span>WASD / edge / middle drag</span></div>
+          <div><b>BUILD</b><span>Select a Fabricator</span></div>
+          <div><b>PAUSE</b><span>P</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause-screen" class="overlay compact-overlay is-hidden">
+      <div class="modal-card">
+        <div class="panel-kicker">TACTICAL HOLD</div>
+        <h2>MISSION PAUSED</h2>
+        <p>Fleet command is holding the simulation.</p>
+        <div class="modal-actions">
+          <button class="primary" id="resume-button">RESUME</button>
+          <button id="restart-button">RESTART MISSION</button>
+          <button id="quit-button">ABORT TO MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="end-screen" class="overlay compact-overlay is-hidden">
+      <div class="modal-card end-card">
+        <div class="end-chevrons" id="end-chevrons"></div>
+        <div class="panel-kicker" id="end-kicker">MISSION COMPLETE</div>
+        <h2 id="end-title">SECTOR SECURED</h2>
+        <p id="end-copy">The Korvax Nexus burns. K-17 is yours.</p>
+        <div class="end-stats" id="end-stats"></div>
+        <div class="modal-actions">
+          <button class="primary" id="replay-button">REPLAY MISSION</button>
+          <button id="menu-button">RETURN TO COMMAND</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading" class="loading is-hidden"><span></span>ESTABLISHING UPLINK</div>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
